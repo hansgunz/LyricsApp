@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">LyricsApp</string>
+    <string name="no_internet_connection_text">No internet connection</string>
+    <string name="server_error_text">Something went wrong from server side</string>
+    <string name="serialization_text">Something went wrong between server and client</string>
+    <string name="bad_request_error_text">Something went wrong from client side</string>
+    <string name="unknown_error_text">Unknown error occurred</string>
+    <string name="request_timeout_error_text">It\'s taking long time</string>
+
+    <!--Home Screen Strings-->
+    <string name="home_screen_title_text">Look for Lyrics!</string>
+    <string name="home_screen_artist_text">Artist</string>
+    <string name="home_screen_song_text">Song</string>
+    <string name="added_to_favorites_text">Added to favorites</string>
+</resources>
