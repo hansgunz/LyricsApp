@@ -16,6 +16,8 @@ import com.example.lyricsapp.domain.usecase.InsertLyricsUseCase
 import com.example.lyricsapp.domain.usecase.InsertLyricsUseCaseImpl
 import com.example.lyricsapp.domain.usecase.common.ErrorHandler
 import com.example.lyricsapp.domain.usecase.common.IErrorHandler
+import com.example.lyricsapp.presentation.viewmodel.utils.IDispatcherProvider
+import com.example.lyricsapp.presentation.viewmodel.utils.StandardDispatcher
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -124,5 +126,11 @@ object ApplicationModule {
             repository = repository,
             errorHandler = errorHandler
         )
+    }
+
+    @Singleton
+    @Provides
+    fun provideIDispatcherProvider(): IDispatcherProvider{
+        return StandardDispatcher()
     }
 }

@@ -7,6 +7,7 @@ import com.example.lyricsapp.domain.usecase.InsertLyricsUseCase
 import com.example.lyricsapp.domain.usecase.result.DataError
 import com.example.lyricsapp.domain.usecase.result.Result
 import com.example.lyricsapp.presentation.viewmodel.states.LyricsScreenState
+import com.example.lyricsapp.presentation.viewmodel.utils.IDispatcherProvider
 import com.example.lyricsapp.presentation.viewmodel.utils.asUiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -19,14 +20,15 @@ import javax.inject.Inject
 @HiltViewModel
 class LyricsScreenViewModel @Inject constructor(
     private val getLyricsUseCase: GetLyricsUseCase,
-    private val insertLyricsUseCase: InsertLyricsUseCase
+    private val insertLyricsUseCase: InsertLyricsUseCase,
+    private val dispatcherProvider: IDispatcherProvider
 ): ViewModel(){
 
     private val _lyricsScreenState = MutableStateFlow(LyricsScreenState())
     val lyricsScreenState = _lyricsScreenState.asStateFlow()
 
     fun fetchLyricsByArtist(artist: String, song: String){
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(dispatcherProvider.io) {
             getLyricsUseCase(artist = artist, title = song).collect{ result ->
                 when(result){
                     is Result.Success -> {
@@ -44,7 +46,7 @@ class LyricsScreenViewModel @Inject constructor(
     }
 
     fun insertLyrics(artist: String, song: String, lyrics: String){
-        viewModelScope.launch(Dispatchers.IO){
+        viewModelScope.launch(dispatcherProvider.io){
             insertLyricsUseCase(artist = artist, song = song, lyrics = lyrics)
         }
     }

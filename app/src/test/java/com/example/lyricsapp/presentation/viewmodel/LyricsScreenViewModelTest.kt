@@ -1,6 +1,8 @@
 package com.example.lyricsapp.presentation.viewmodel
 
+import androidx.compose.runtime.Composable
 import app.cash.turbine.test
+import com.example.lyricsapp.R
 import com.example.lyricsapp.data.local.dao.LyricsDao
 import com.example.lyricsapp.data.remote.api.LyricApi
 import com.example.lyricsapp.data.remote.model.DataDTO
@@ -9,44 +11,60 @@ import com.example.lyricsapp.domain.repository.LyricsRepository
 import com.example.lyricsapp.domain.usecase.GetLyricsUseCase
 import com.example.lyricsapp.domain.usecase.InsertLyricsUseCase
 import com.example.lyricsapp.domain.usecase.common.IErrorHandler
+import com.example.lyricsapp.domain.usecase.result.DataError
 import com.example.lyricsapp.domain.usecase.result.Result
+import com.example.lyricsapp.presentation.viewmodel.states.LyricsScreenState
+import com.example.lyricsapp.presentation.viewmodel.utils.CoroutineTestRule
+import com.example.lyricsapp.presentation.viewmodel.utils.UiText
+import com.example.lyricsapp.presentation.viewmodel.utils.asUiText
+import io.mockk.clearAllMocks
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
-import org.mockito.Mockito
+
 
 class LyricsScreenViewModelTest {
 
     private lateinit var getLyricsUseCase: GetLyricsUseCase
     private lateinit var insertLyricsUseCase: InsertLyricsUseCase
     private lateinit var lyricsScreenViewModel: LyricsScreenViewModel
-    private lateinit var lyricsRepository: LyricsRepository
     private lateinit var errorHandler: IErrorHandler
-    private lateinit var lyricsApi: LyricApi
-    private lateinit var lyricsDao: LyricsDao
+    private val TAG = this::class.simpleName
+
+    @get:Rule
+    val coroutineTestRule: CoroutineTestRule = CoroutineTestRule()
 
     @Before
     fun setUp() {
-        getLyricsUseCase = Mockito.mock(GetLyricsUseCase::class.java)
-        insertLyricsUseCase = Mockito.mock(InsertLyricsUseCase::class.java)
-        lyricsRepository = Mockito.mock(LyricsRepository::class.java)
-        errorHandler = Mockito.mock(IErrorHandler::class.java)
-        lyricsApi = Mockito.mock(LyricApi::class.java)
-        lyricsDao = Mockito.mock(LyricsDao::class.java)
+        getLyricsUseCase = mockk()
+        insertLyricsUseCase = mockk()
+        errorHandler = mockk()
         lyricsScreenViewModel = LyricsScreenViewModel(
             getLyricsUseCase = getLyricsUseCase,
-            insertLyricsUseCase = insertLyricsUseCase
+            insertLyricsUseCase = insertLyricsUseCase,
+            dispatcherProvider = coroutineTestRule.testDispatcherProvider
         )
     }
 
     @After
     fun tearDown() {
+        clearAllMocks()
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun verifyFetchLyricsByArtistIsSuccess() = runTest {
         val artist = "the strokes"
@@ -55,28 +73,84 @@ class LyricsScreenViewModelTest {
         val data = Data(
             lyricsString
         )
-        val dataDTO =
-            DataDTO(
-                lyricsString
-            )
 
-        Mockito.`when`(getLyricsUseCase(artist, song)).thenReturn(flow {
+        coEvery { getLyricsUseCase(artist, song) } returns flow {
             emit(Result.Loading())
             emit(Result.Success(data))
-        })
-        Mockito.`when`(lyricsRepository.getLyrics(artist, song)).thenReturn(
-             dataDTO
-        )
-        Mockito.`when`(lyricsApi.getLyrics(artist, song)).thenReturn(
-            dataDTO
-        )
-        lyricsScreenViewModel.fetchLyricsByArtist(artist, song)
-        getLyricsUseCase(artist, song).test {
-            val firstItem = awaitItem()
-            val secondItem = awaitItem()
-            Assert.assertTrue(firstItem is Result.Loading)
-            Assert.assertTrue(secondItem is Result.Success)
+        }
+
+        lyricsScreenViewModel.lyricsScreenState.test {
+            awaitItem()
+            lyricsScreenViewModel.fetchLyricsByArtist(artist, song)
+            advanceUntilIdle()
+            awaitItem()
+            Assert.assertEquals(lyricsString, awaitItem().lyrics)
+            cancelAndIgnoreRemainingEvents()
+        }
+
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun verifyFetchLyricsByArtistIsLoading() = runTest {
+        val artist = "the strokes"
+        val song = "juicebox"
+
+        coEvery { getLyricsUseCase(artist, song)} returns flow {
+            emit(Result.Loading())
+        }
+
+        lyricsScreenViewModel.lyricsScreenState.test {
+            awaitItem()
+            lyricsScreenViewModel.fetchLyricsByArtist(artist, song)
+            advanceUntilIdle()
+            Assert.assertTrue(awaitItem().isLoading)
+            cancelAndIgnoreRemainingEvents()
         }
     }
 
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun verifyFetchLyricsByArtistError() = runTest {
+        val artist = "the strokes"
+        val song = "juicebox"
+
+        every { errorHandler.ioErrorHandler(TAG ?: "") } returns DataError.Network.NO_INTERNET
+        coEvery { getLyricsUseCase(artist, song) } returns flow {
+            emit(Result.Loading())
+            emit(Result.Error(errorHandler.ioErrorHandler(TAG ?: "")))
+        }
+
+        lyricsScreenViewModel.lyricsScreenState.test {
+            awaitItem()
+            lyricsScreenViewModel.fetchLyricsByArtist(artist, song)
+            advanceUntilIdle()
+            awaitItem()
+            Assert.assertTrue(awaitItem().error != UiText.DynamicString(""))
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun verifyInsertLyricsIsCalled() = runTest {
+        val artist = "Muse"
+        val song = "Knights of Cydonia"
+        val lyrics = "Everybody sees me\n" +
+                "But its not that easy\n" +
+                "Standing in the lightfield\n" +
+                "Standing in the lightfield\n"
+
+        coEvery { insertLyricsUseCase(artist = artist, song = song, lyrics = lyrics) } returns Unit
+
+        lyricsScreenViewModel.insertLyrics(
+            artist = artist,
+            song = song,
+            lyrics = lyrics
+        )
+        advanceUntilIdle()
+
+        coVerify { insertLyricsUseCase(artist = artist, song = song, lyrics = lyrics) }
+    }
 }
