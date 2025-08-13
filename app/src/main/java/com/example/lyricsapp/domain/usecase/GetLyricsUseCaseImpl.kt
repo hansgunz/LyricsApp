@@ -21,7 +21,7 @@ class GetLyricsUseCaseImpl @Inject constructor(
     override fun invoke(artist: String, title: String): Flow<Result<Data, DataError.Network>> = flow {
         try {
             emit(Result.Loading())
-            val lyrics = lyricsRepository.getLyrics(artist, title).toData()
+            val lyrics = lyricsRepository.getLyrics(artist, title)
             emit(Result.Success(lyrics))
         } catch (e: HttpException){
             emit(Result.Error(errorHandler.httpErrorHandler(e, TAG)))
