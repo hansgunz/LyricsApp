@@ -20,9 +20,7 @@ class FetchLyricsFromLocalUseCaseImpl @Inject constructor(
     override suspend fun invoke(): Flow<Result<List<LyricsData>, DataError>> = flow{
         try {
             emit(Result.Loading())
-            val lyricsList = repository.fetchLyricsFromLocal().map {
-                it.toLyrics()
-            }
+            val lyricsList = repository.fetchLyricsFromLocal()
             emit(Result.Success(lyricsList))
         } catch (e: IOException){
             //research about how to handle errors with room

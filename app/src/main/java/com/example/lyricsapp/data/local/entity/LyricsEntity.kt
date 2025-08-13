@@ -11,13 +11,4 @@ data class LyricsEntity(
     val artist: String,
     val song: String,
     val lyrics: String
-){
-    fun toLyrics(): LyricsData{
-        return LyricsData(
-            id = id,
-            artist = artist,
-            song = song,
-            lyrics = lyrics
-        )
-    }
-}
+)
